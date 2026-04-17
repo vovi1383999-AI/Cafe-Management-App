@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  CASHIER
+  BARISTA
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  CLEANING
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+}
+
+enum OrderStatus {
+  OPEN
+  PAID
+  CANCELLED
+}
+
+enum OrderItemStatus {
+  NEW
+  PREPARING
+  SERVED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  E_WALLET
+  BANK_TRANSFER
+}
+
+enum StockTransactionType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  fullName     String
+  passwordHash String
+  role         UserRole
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  orders       Order[]
+  payments     Payment[]
+  stockTxns    StockTransaction[]
+  openedShifts Shift[]  @relation("ShiftOpenedBy")
+  closedShifts Shift[]  @relation("ShiftClosedBy")
+}
+
+model CafeTable {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  name        String
+  capacity    Int
+  status      TableStatus @default(AVAILABLE)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  orders      Order[]
+}
+
+model MenuCategory {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  items       MenuItem[]
+}
+
+model MenuItem {
+  id           String    @id @default(cuid())
+  categoryId   String
+  name         String
+  description  String?
+  price        Decimal   @db.Decimal(12, 2)
+  sku          String    @unique
+  isAvailable  Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  category     MenuCategory @relation(fields: [categoryId], references: [id])
+  orderItems   OrderItem[]
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  tableId       String?
+  userId        String
+  orderType     OrderType
+  status        OrderStatus @default(OPEN)
+  note          String?
+  openedAt      DateTime    @default(now())
+  closedAt      DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  table         CafeTable? @relation(fields: [tableId], references: [id])
+  user          User       @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+  payment       Payment?
+
+  @@index([tableId, status])
+}
+
+model OrderItem {
+  id            String          @id @default(cuid())
+  orderId        String
+  menuItemId     String
+  quantity       Int
+  unitPrice      Decimal         @db.Decimal(12, 2)
+  note           String?
+  status         OrderItemStatus @default(NEW)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  order          Order    @relation(fields: [orderId], references: [id])
+  menuItem       MenuItem @relation(fields: [menuItemId], references: [id])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  orderId         String        @unique
+  userId          String
+  method          PaymentMethod
+  amount          Decimal       @db.Decimal(12, 2)
+  paidAt          DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+
+  order           Order         @relation(fields: [orderId], references: [id])
+  user            User          @relation(fields: [userId], references: [id])
+}
+
+model InventoryItem {
+  id             String   @id @default(cuid())
+  name           String
+  unit           String
+  currentStock   Decimal  @db.Decimal(12, 2)
+  minStock       Decimal  @db.Decimal(12, 2)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  transactions   StockTransaction[]
+}
+
+model StockTransaction {
+  id              String               @id @default(cuid())
+  inventoryItemId String
+  userId          String
+  shiftId         String?
+  type            StockTransactionType
+  quantity        Decimal              @db.Decimal(12, 2)
+  note            String?
+  createdAt       DateTime             @default(now())
+
+  item            InventoryItem        @relation(fields: [inventoryItemId], references: [id])
+  user            User                 @relation(fields: [userId], references: [id])
+  shift           Shift?               @relation(fields: [shiftId], references: [id])
+}
+
+model Shift {
+  id            String      @id @default(cuid())
+  code          String      @unique
+  openedById    String
+  closedById    String?
+  status        ShiftStatus @default(OPEN)
+  openedAt      DateTime    @default(now())
+  closedAt      DateTime?
+  openingCash   Decimal     @db.Decimal(12, 2)
+  closingCash   Decimal?    @db.Decimal(12, 2)
+  note          String?
+  createdAt     DateTime    @default(now())
+
+  openedBy      User        @relation("ShiftOpenedBy", fields: [openedById], references: [id])
+  closedBy      User?       @relation("ShiftClosedBy", fields: [closedById], references: [id])
+  transactions  StockTransaction[]
+}
