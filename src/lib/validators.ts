@@ -34,7 +34,11 @@ export const inventoryItemSchema = z.object({
 });
 
 export const createOrderSchema = z.object({
-  tableId: z.string().optional(),
+  tableId: z.preprocess((value) => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed === '' ? undefined : trimmed;
+  }, z.string().optional()),
   orderType: z.nativeEnum(OrderType),
   note: z.string().optional()
 });
@@ -56,7 +60,11 @@ export const stockTxnSchema = z.object({
   type: z.nativeEnum(StockTransactionType),
   quantity: z.coerce.number().positive(),
   note: z.string().optional(),
-  shiftId: z.string().optional()
+  shiftId: z.preprocess((value) => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed === '' ? undefined : trimmed;
+  }, z.string().optional())
 });
 
 export const userSchema = z.object({

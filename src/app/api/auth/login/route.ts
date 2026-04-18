@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
+import { createSessionToken } from '@/lib/auth';
 import { AUTH_COOKIE } from '@/lib/constants';
 import { loginSchema } from '@/lib/validators';
 
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const response = NextResponse.redirect(new URL('/dashboard', request.url));
-  response.cookies.set(AUTH_COOKIE, user.id, {
+  response.cookies.set(AUTH_COOKIE, createSessionToken(user.id), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',

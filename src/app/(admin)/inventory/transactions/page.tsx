@@ -22,7 +22,7 @@ export default async function InventoryTransactionsPage() {
         </select>
         <input name="quantity" type="number" step="0.01" min="0.01" placeholder="Số lượng" className="rounded border px-2 py-2" required />
         <input name="note" placeholder="Ghi chú" className="rounded border px-2 py-2" />
-        <input type="hidden" name="shiftId" value={shifts[0]?.id ?? ''} />
+        {shifts[0]?.id ? <input type="hidden" name="shiftId" value={shifts[0].id} /> : null}
         <button className="rounded bg-stone-900 px-3 py-2 text-white">Ghi nhận</button>
       </form>
 
